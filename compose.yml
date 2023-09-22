@@ -1,0 +1,83 @@
+version: '3'
+
+services:
+
+  auth-db:
+    container_name: auth-db
+    image: postgres:15.4-alpine3.18
+    restart: always
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=authdb
+    ports:
+      - 5040:5432
+
+  order-db:
+    container_name: order-db
+    image: postgres:15.4-alpine3.18
+    restart: always
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=orderdb
+    ports:
+      - 5041:5432
+
+  product-db:
+    container_name: product-db
+    image: postgres:15.4-alpine3.18
+    restart: always
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=productdb
+    ports:
+      - 5042:5432
+
+  auth-service:
+    container_name: authorization
+    build: ./go-grpc-auth-svc
+    ports:
+      - 50050:50050
+    depends_on:
+      - auth-db
+    environment:
+      PORT: :50050
+      DB_URL: postgres://user:postgres@auth-db/authdb
+      JWT_SECRET_KEY: example
+
+
+  product-service:
+    container_name: product
+    build: ./go-grpc-product-svc
+    ports:
+      - 50052:50052
+    depends_on:
+      - product-db
+    environment:
+      PORT: :50052
+      DB_URL: postgres://user:postgres@product-db/productdb
+  
+  order-service:
+    container_name: order
+    build: ./go-grpc-order-svc
+    ports:
+      - 50053:50053
+    depends_on:
+      - order-db
+    environment:
+      PORT: :50053
+      DB_URL: 'postgres://user:postgres@order-db/orderdb'
+  
+  api-gateway:
+    container_name: api
+    build: ./go-grpc-api-gateway
+    ports:
+      - 3000:3000
+    environment:
+      AUTH_SVC_URL: 'auth-service:50050'
+      PRODUCT_SVC_URL: 'product-service:50052'
+      ORDER_SVC_URL: 'order-service:50053'
+  
+  
